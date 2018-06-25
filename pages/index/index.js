@@ -28,11 +28,9 @@ Page({
     nowWeather: ''
   },
   onPullDownRefresh() {
-    console.log('refresh')
-    this.getNow()
-    wx.stopPullDownRefresh()
+    this.getNow(() => {wx.stopPullDownRefresh()})
   },
-  getNow() {
+  getNow(callback) {
     wx.request({
       url: nowBaseUrl,
       data: { city: '广州市' },
@@ -49,6 +47,9 @@ Page({
           frontColor: '#000000',
           backgroundColor: weatherColorMap[tempData.now.weather]
         })
+      },
+      complete: () => {
+        callback && callback()
       }
     })
   },
