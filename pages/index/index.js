@@ -34,7 +34,6 @@ const weatherBgUrlMap = {
 }
 
 const nowBaseUrl = 'https://test-miniprogram.com/api/weather/now'
-const futureBaseUrl = 'https://test-miniprogram.com/api/weather/future'
 
 Page({
   onLoad() {
@@ -42,7 +41,10 @@ Page({
   },
   data: {
     nowTemp: '',
-    nowWeather: ''
+    nowWeather: '',
+    todayDate: '',
+    todayTemp: '',
+    forecastWeather: ''
   },
   onPullDownRefresh() {
     this.getNow(() => {wx.stopPullDownRefresh()})
@@ -52,49 +54,53 @@ Page({
       url: nowBaseUrl,
       data: { city: '广州市' },
       success: (res) => {
-        const tempData = res.data.result
-
-        this.setData({
-          nowTemp: tempData.now.temp + '°',
-          nowWeather: weatherMap[tempData.now.weather],
-          nowBackgroundImage: weatherBgUrlMap[tempData.now.weather]
-        })
-        wx.setNavigationBarColor({
-          frontColor: '#000000',
-          backgroundColor: weatherColorMap[tempData.now.weather]
-        })
-
-        const forecast = tempData.forecast
-        console.log(forecast)
-        let nowHour = new Date().getHours()
-        let hourlyWeather = []
-        for(let i = 0; i < 24; i += 3) {
-          hourlyWeather.push({
-            time: (i + nowHour) % 24 + '时',
-            iconPath: weatherIconUrlMap[forecast[i / 3].weather],
-            temp: forecast[i / 3].weather.temp
-          })
-        }
-        this.setData({ forecastWeather: hourlyWeather })
-
+        this.setNow(res)
+        this.setForecast(res)
+        this.setToday(res)
       },
       complete: () => {
         callback && callback()
       }
     })
   },
-  getFuture() {
-    wx.request({
-      url: futureBaseUrl,
-      data: {
-        city: '广州市',
-        time: Date.parse(new Date()),
-      },
-      success: (res) => {
-        const data = res.data.result
-        this.setData({futureWeather: data})
-      }
+  setNow(res) {
+    const tempData = res.data.result
+    this.setData({
+      nowTemp: tempData.now.temp + '°',
+      nowWeather: weatherMap[tempData.now.weather],
+      nowBackgroundImage: weatherBgUrlMap[tempData.now.weather]
+    })
+    wx.setNavigationBarColor({
+      frontColor: '#000000',
+      backgroundColor: weatherColorMap[tempData.now.weather]
     })
   },
-
+  setToday(res) {
+    const data = res.data.result.today
+    let date = new Date()
+    this.setData({
+      todayDate: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} 今天`,
+      todayTemp: `${data.minTemp}° ~ ${data.maxTemp}°`,
+    })
+  },
+  setForecast(res) {
+    const forecast = res.data.result.forecast
+    let nowHour = new Date().getHours()
+    let hourlyWeather = []
+    for (let i = 0; i < 7; i++) {
+      hourlyWeather.push({
+        time: (i * 3 + nowHour) % 24 + '时',
+        iconPath: weatherIconUrlMap[forecast[i].weather],
+        temp: forecast[i].temp
+      })
+    }
+    hourlyWeather[0].time = '现在'
+    this.setData({ forecastWeather: hourlyWeather })
+  },
+  onTapDayWeather() {
+    wx.showToast()
+    wx.navigateTo({
+      url: '/pages/list/list',
+    })
+  },
 })
